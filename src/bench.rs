@@ -47,6 +47,7 @@ fn main() -> anyhow::Result<()> {
     // print all results
     for res in &results {
         match res {
+            // This line now works correctly due to Display implementation in board.rs
             Ok((score, board)) => println!("score (#actions): {score}\n{board}\n"),
             Err(e) => println!("{e}"),
         }
@@ -104,6 +105,7 @@ fn play(timeout: Duration) -> anyhow::Result<(f32, PlayableBoard)> {
         num_moves += 1;
         let played = board
             .apply(action)
+            // This 'format!' call now works because PlayableBoard implements Display
             .with_context(|| format!("Got inapplicable action {action:?} on board\n{board}"))?;
         board = played.with_random_tile();
     }

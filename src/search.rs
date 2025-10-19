@@ -1,7 +1,7 @@
 use std::iter::successors;
 
 use hashbrown::HashMap;
-use rand::Rng;
+use rand::Rng as _;
 use rayon::range; // import trait to make the `random_range` method available (Rng = Random number generator)
 
 use crate::board::*;
