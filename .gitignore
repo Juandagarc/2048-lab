@@ -1,1 +1,63 @@
 Cargo.lock
+
+# Build artifacts
+/target/
+
+# Rust/Cargo
+**/Cargo.lock
+**/Cargo.toml.orig
+**/*.rs.bk
+
+# Binary artifacts
+*.exe
+*.dll
+*.dylib
+*.so
+
+# Editor/IDE
+.vscode/
+.idea/
+*.iml
+*.sublime-workspace
+*.sublime-project
+
+# Swap / temp files
+*~
+*.swp
+*.swo
+*.tmp
+*.temp
+*.backup
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbs / Windows
+Thumbs.db
+ehthumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# Node / frontend deps if any
+node_modules/
+
+# Coverage/profiles
+coverage/
+*.prof
+
+# Misc
+*.core
+*.pid
+
+# Ignore build artifacts created by some native libs / examples
+/target/*/build/
+
+# keep workspace-specific settings out
+/.vagrant/
