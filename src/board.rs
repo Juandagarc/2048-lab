@@ -5,6 +5,8 @@ use macroquad::prelude::*; // Import Macroquad drawing functions (Color is now u
 // CORRECTION: Explicitly import the Rng trait using absolute path to resolve ambiguity
 use ::rand::Rng as _;
 
+use crate::bayes; // nuevo: módulo para Bayes y estadísticas
+
 // --- RENDERING CONSTANTS (MACROQUAD) ---
 // Dimensions and styles for the grid
 pub const WINDOW_WIDTH: f32 = 600.0;
@@ -69,6 +71,86 @@ impl PlayableBoard {
             FONT_SIZE / 2.0,
             BLACK,
         );
+
+        // Draw probabilistic info using Bayes helpers
+        // Compute number of empty cells
+        let num_empty = self.0.num_empty();
+        if num_empty > 0 {
+            // Get stats and use posterior mean instead of fixed 0.1
+            let stats = bayes::get_stats();
+            let p_tile_4_any = stats.posterior_mean;
+            draw_text(
+                &format!("P(next tile is 4) = {:.2}%", p_tile_4_any * 100.0),
+                WINDOW_WIDTH - 260.0,
+                30.0,
+                FONT_SIZE / 3.0,
+                BLACK,
+            );
+
+            // Per-cell probability of getting a 4: (posterior_mean / num_empty)
+            let p_cell_4 = p_tile_4_any / (num_empty as f32);
+
+            // Draw a small grid of semi-transparent overlays showing probability of 4 per cell
+            for i in 0..N {
+                for j in 0..N {
+                    let (x, y) = self.get_tile_position(j, i);
+                    if self.0.cells[i][j] == 0 {
+                        // draw a translucent blue overlay proportional to p_cell_4
+                        let alpha = (p_cell_4 * 4.0).min(0.8); // scale for visibility
+                        draw_rectangle(
+                            x,
+                            y,
+                            TILE_SIZE,
+                            TILE_SIZE,
+                            Color::new(0.2, 0.5, 0.95, alpha),
+                        );
+
+                        // show percentage in small font at bottom-right of the tile
+                        draw_text(
+                            &format!("{:.1}%", p_cell_4 * 100.0),
+                            x + TILE_SIZE - 48.0,
+                            y + TILE_SIZE - 8.0,
+                            FONT_SIZE / 3.0,
+                            WHITE,
+                        );
+                    }
+                }
+            }
+
+            // Draw a simple bar chart of counts of 4s observed so far (from global stats)
+            let total_4s = stats.total_fours as f32;
+            let bar_x = WINDOW_WIDTH - 260.0;
+            let mut bar_y = 40.0;
+            draw_text("Observed 4s:", bar_x, bar_y, FONT_SIZE / 3.0, BLACK);
+            bar_y += 8.0;
+            let bar_w = 200.0;
+            let bar_h = 12.0;
+            let max_expected = 30.0_f32.max(total_4s); // scaling
+            let filled_w = (total_4s / max_expected) * bar_w;
+            draw_rectangle(bar_x, bar_y + 4.0, bar_w, bar_h, Color::new(0.9, 0.9, 0.9, 1.0));
+            draw_rectangle(bar_x, bar_y + 4.0, filled_w, bar_h, Color::new(0.2, 0.6, 0.2, 1.0));
+            draw_text(&format!("{}", stats.total_fours), bar_x + bar_w + 8.0, bar_y + 14.0, FONT_SIZE / 3.5, BLACK);
+
+            // Draw a tiny sparkline of per-move probabilities (history)
+            let history = &stats.p_move_probs;
+            let spark_x = WINDOW_WIDTH - 260.0;
+            let spark_y = bar_y + 30.0;
+            let spark_w = 200.0;
+            let spark_h = 30.0;
+            draw_rectangle(spark_x, spark_y, spark_w, spark_h, Color::new(0.98, 0.98, 0.98, 1.0));
+            if !history.is_empty() {
+                let len = history.len();
+                for k in 0..len.saturating_sub(1) {
+                    let v1 = history[k];
+                    let v2 = history[k + 1];
+                    let x1 = spark_x + (k as f32 / (len as f32 - 1.0)) * spark_w;
+                    let x2 = spark_x + ((k + 1) as f32 / (len as f32 - 1.0)) * spark_w;
+                    let y1 = spark_y + spark_h - (v1 * spark_h);
+                    let y2 = spark_y + spark_h - (v2 * spark_h);
+                    draw_line(x1, y1, x2, y2, 2.0, Color::new(0.2, 0.4, 0.9, 1.0));
+                }
+            }
+        }
 
         // Draw cells and tiles
         for i in 0..N {
@@ -261,6 +343,13 @@ impl Board {
 
         // update the board by setting the value to the selected empty cell
         *picked = value;
+
+        // value == 1 => tile 2 observed; value == 2 => tile 4 observed
+        if value == 1 {
+            bayes::record_observed_two();
+        } else if value == 2 {
+            bayes::record_observed_four();
+        }
     }
 
     /// Counts the number of empty tiles on the board

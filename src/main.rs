@@ -3,6 +3,7 @@
 pub mod board;
 pub mod eval;
 pub mod search;
+pub mod bayes;
 
 use std::{
     time::{Instant, Duration},
@@ -38,11 +39,16 @@ async fn main() {
     match choice.as_str() {
         "A" => {
             println!("\nStarting game in Agent Mode. (Popup Window)");
+            // enable bayes stats and reset per-game
+            bayes::reset_stats_for_new_game();
+            bayes::enable();
             // Execute the agent's asynchronous game loop
             play_agent(init).await;
         }
         "P" => {
             println!("\nStarting game in Human Mode. (Popup Window)");
+            bayes::reset_stats_for_new_game();
+            bayes::enable();
             // Execute the human player's asynchronous game loop
             play_person(init).await;
         }
@@ -89,6 +95,8 @@ pub async fn play_agent(init: PlayableBoard) {
             None => {
                 // Game Over: No possible moves left
                 println!("GAME OVER! Num moves: {num_moves}");
+                // print bayes summary
+                bayes::print_summary();
                 game_over = true;
                 continue;
             }
@@ -137,6 +145,7 @@ pub async fn play_person(init: PlayableBoard) {
 
         if is_game_over {
             println!("GAME OVER! Number of moves: {num_moves}");
+            bayes::print_summary();
             game_over = true;
             next_frame().await;
             continue;

@@ -10,6 +10,7 @@ use rayon::prelude::*;
 mod board;
 mod eval;
 mod search;
+mod bayes;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -31,6 +32,10 @@ fn main() -> anyhow::Result<()> {
     let num_games = args.num_games;
     // maximum allow runtime for each game
     let timeout = Duration::from_secs(args.timeout);
+
+    // enable bayes collection for bench runs (temporary for testing)
+    bayes::reset_stats_for_new_game();
+    bayes::enable();
 
     // configure the global thread pool of rayon to have as many threads as we have *physical* CPUs
     rayon::ThreadPoolBuilder::new()
@@ -77,6 +82,9 @@ fn main() -> anyhow::Result<()> {
     let average_score: f32 =
         valid_results.iter().map(|(score, _)| *score).sum::<f32>() / (valid_results.len() as f32);
     println!("Average score (#actions):   {:6.2}", average_score);
+
+    // Print bayes summary for verification
+    bayes::print_summary();
 
     Ok(())
 }

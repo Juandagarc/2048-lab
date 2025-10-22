@@ -5,6 +5,7 @@ use rand::Rng as _;
 use rayon::range; // import trait to make the `random_range` method available (Rng = Random number generator)
 
 use crate::board::*;
+use crate::bayes; // registrar probabilidades por movimiento
 
 pub fn select_action(board: PlayableBoard) -> Option<Action> {
     //select_action_randomly(board)
@@ -37,12 +38,12 @@ pub fn select_action_randomly(board: PlayableBoard) -> Option<Action> {
     Some(randomly_selected_action)
 }
 
-    /*
-    simulates all possible actions
-    evaluate all applicable ones (the RandableBoard type provides an evaluate method)
-    return the action with the highest evaluation
-    or return None if there were no applicable action
-    */
+/*
+simulates all possible actions
+evaluate all applicable ones (the RandableBoard type provides an evaluate method)
+return the action with the highest evaluation
+or return None if there were no applicable action
+*/
 pub fn select_action_greedily(board: PlayableBoard) -> Option<Action> {
 
         // iterate through all actions and keep the applicable ones
@@ -84,6 +85,13 @@ pub fn select_action_expectimax(board: PlayableBoard, max_actions: usize) -> Opt
             // action is not aplicable, ignore
         }
     }
+
+    // Record the current predicted probability for this move (posterior mean)
+    if let Some(_best) = best_action {
+        let p_pred = bayes::get_stats().posterior_mean;
+        bayes::record_p_move_prob(p_pred);
+    }
+
     return best_action;
 }
 
