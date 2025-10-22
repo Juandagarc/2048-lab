@@ -1,10 +1,7 @@
-Cargo.lock
-
 # Build artifacts
 /target/
 
 # Rust/Cargo
-**/Cargo.lock
 **/Cargo.toml.orig
 **/*.rs.bk
 

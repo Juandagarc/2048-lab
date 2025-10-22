@@ -21,8 +21,8 @@ const AGENT_DELAY_MS: u64 = 100;
 // The main function for Macroquad must be ASYNCHRONOUS
 #[macroquad::main("2048 Expectimax")]
 async fn main() {
-    // Set the window size
-    request_new_screen_size(WINDOW_DIM, WINDOW_DIM + 60.0); // +60px for the UI
+    // Set the window size using the UI height defined in `board` so the board sits más abajo
+    request_new_screen_size(WINDOW_DIM, WINDOW_DIM + UI_HEIGHT);
 
     // Mode Selection Logic 
     println!("Welcome to 2048!");

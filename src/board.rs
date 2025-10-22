@@ -11,7 +11,7 @@ use crate::bayes; // nuevo: módulo para Bayes y estadísticas
 // Dimensions and styles for the grid
 pub const WINDOW_WIDTH: f32 = 600.0;
 const PADDING: f32 = 10.0;
-const UI_HEIGHT: f32 = 60.0; // Extra space for statistics
+pub const UI_HEIGHT: f32 = 140.0; // Extra space for statistics (ampliada para que la UI quede por encima del tablero)
 const GRID_SIZE: f32 = WINDOW_WIDTH - 2.0 * PADDING;
 // Tile size calculation
 const TILE_SIZE: f32 = (GRID_SIZE - (N as f32 + 1.0) * PADDING) / N as f32;
@@ -56,101 +56,7 @@ impl PlayableBoard {
             BORDER_COLOR,
         );
 
-        // Draw statistics (Text)
-        draw_text(
-            &format!("Moves: {}", num_moves),
-            PADDING,
-            30.0,
-            FONT_SIZE / 2.0,
-            BLACK,
-        );
-        draw_text(
-            &format!("Dec. Time: {:.2}ms", decision_time_ms),
-            PADDING,
-            55.0,
-            FONT_SIZE / 2.0,
-            BLACK,
-        );
-
-        // Draw probabilistic info using Bayes helpers
-        // Compute number of empty cells
-        let num_empty = self.0.num_empty();
-        if num_empty > 0 {
-            // Get stats and use posterior mean instead of fixed 0.1
-            let stats = bayes::get_stats();
-            let p_tile_4_any = stats.posterior_mean;
-            draw_text(
-                &format!("P(next tile is 4) = {:.2}%", p_tile_4_any * 100.0),
-                WINDOW_WIDTH - 260.0,
-                30.0,
-                FONT_SIZE / 3.0,
-                BLACK,
-            );
-
-            // Per-cell probability of getting a 4: (posterior_mean / num_empty)
-            let p_cell_4 = p_tile_4_any / (num_empty as f32);
-
-            // Draw a small grid of semi-transparent overlays showing probability of 4 per cell
-            for i in 0..N {
-                for j in 0..N {
-                    let (x, y) = self.get_tile_position(j, i);
-                    if self.0.cells[i][j] == 0 {
-                        // draw a translucent blue overlay proportional to p_cell_4
-                        let alpha = (p_cell_4 * 4.0).min(0.8); // scale for visibility
-                        draw_rectangle(
-                            x,
-                            y,
-                            TILE_SIZE,
-                            TILE_SIZE,
-                            Color::new(0.2, 0.5, 0.95, alpha),
-                        );
-
-                        // show percentage in small font at bottom-right of the tile
-                        draw_text(
-                            &format!("{:.1}%", p_cell_4 * 100.0),
-                            x + TILE_SIZE - 48.0,
-                            y + TILE_SIZE - 8.0,
-                            FONT_SIZE / 3.0,
-                            WHITE,
-                        );
-                    }
-                }
-            }
-
-            // Draw a simple bar chart of counts of 4s observed so far (from global stats)
-            let total_4s = stats.total_fours as f32;
-            let bar_x = WINDOW_WIDTH - 260.0;
-            let mut bar_y = 40.0;
-            draw_text("Observed 4s:", bar_x, bar_y, FONT_SIZE / 3.0, BLACK);
-            bar_y += 8.0;
-            let bar_w = 200.0;
-            let bar_h = 12.0;
-            let max_expected = 30.0_f32.max(total_4s); // scaling
-            let filled_w = (total_4s / max_expected) * bar_w;
-            draw_rectangle(bar_x, bar_y + 4.0, bar_w, bar_h, Color::new(0.9, 0.9, 0.9, 1.0));
-            draw_rectangle(bar_x, bar_y + 4.0, filled_w, bar_h, Color::new(0.2, 0.6, 0.2, 1.0));
-            draw_text(&format!("{}", stats.total_fours), bar_x + bar_w + 8.0, bar_y + 14.0, FONT_SIZE / 3.5, BLACK);
-
-            // Draw a tiny sparkline of per-move probabilities (history)
-            let history = &stats.p_move_probs;
-            let spark_x = WINDOW_WIDTH - 260.0;
-            let spark_y = bar_y + 30.0;
-            let spark_w = 200.0;
-            let spark_h = 30.0;
-            draw_rectangle(spark_x, spark_y, spark_w, spark_h, Color::new(0.98, 0.98, 0.98, 1.0));
-            if !history.is_empty() {
-                let len = history.len();
-                for k in 0..len.saturating_sub(1) {
-                    let v1 = history[k];
-                    let v2 = history[k + 1];
-                    let x1 = spark_x + (k as f32 / (len as f32 - 1.0)) * spark_w;
-                    let x2 = spark_x + ((k + 1) as f32 / (len as f32 - 1.0)) * spark_w;
-                    let y1 = spark_y + spark_h - (v1 * spark_h);
-                    let y2 = spark_y + spark_h - (v2 * spark_h);
-                    draw_line(x1, y1, x2, y2, 2.0, Color::new(0.2, 0.4, 0.9, 1.0));
-                }
-            }
-        }
+        // (Stats moved to the top UI panel drawn after the board to ensure visibility)
 
         // Draw cells and tiles
         for i in 0..N {
@@ -191,6 +97,77 @@ impl PlayableBoard {
                         font_size,
                         text_color,
                     );
+                }
+            }
+        }
+
+        // --- Probabilistic UI overlay (dibujar después de las fichas para que quede encima) ---
+        let num_empty = self.0.num_empty();
+        if num_empty > 0 {
+            // Draw top UI panel background so the bar and texts are clearly visible
+            draw_rectangle(0.0, 0.0, WINDOW_WIDTH, UI_HEIGHT, Color::new(0.98, 0.97, 0.94, 1.0));
+            // small separator line under the panel
+            draw_rectangle(0.0, UI_HEIGHT - 2.0, WINDOW_WIDTH, 2.0, Color::new(0.83, 0.79, 0.73, 1.0));
+
+            // Draw Moves and Decision Time at the top-left inside the panel
+            draw_text(&format!("Moves: {}", num_moves), PADDING, 30.0, FONT_SIZE/2.0, BLACK);
+            draw_text(&format!("Dec. Time: {:.2}ms", decision_time_ms), PADDING, 55.0, FONT_SIZE/2.0, BLACK);
+
+            let stats = bayes::get_stats();
+            let p_tile_4_any = stats.posterior_mean;
+            draw_text(
+                &format!("P(next tile is 4) = {:.2}%", p_tile_4_any * 100.0),
+                WINDOW_WIDTH - 260.0,
+                30.0,
+                FONT_SIZE / 3.0,
+                BLACK,
+            );
+
+            let p_cell_4 = p_tile_4_any / (num_empty as f32);
+
+            // Draw per-cell overlay for empty cells (on top of the board)
+            for i in 0..N {
+                for j in 0..N {
+                    let (x, y) = self.get_tile_position(j, i);
+                    if self.0.cells[i][j] == 0 {
+                        let alpha = (p_cell_4 * 4.0).min(0.8);
+                        draw_rectangle(x, y, TILE_SIZE, TILE_SIZE, Color::new(0.2, 0.5, 0.95, alpha));
+                        draw_text(&format!("{:.1}%", p_cell_4 * 100.0), x + TILE_SIZE - 48.0, y + TILE_SIZE - 8.0, FONT_SIZE / 3.0, WHITE);
+                    }
+                }
+            }
+
+            // Draw a simple bar chart of counts of 4s observed so far (from global stats)
+            let total_4s = stats.total_fours as f32;
+            let bar_x = WINDOW_WIDTH - 260.0;
+            let mut bar_y = 40.0;
+            draw_text("Observed 4s:", bar_x, bar_y, FONT_SIZE / 3.0, BLACK);
+            bar_y += 8.0;
+            let bar_w = 200.0;
+            let bar_h = 12.0;
+            let max_expected = 30.0_f32.max(total_4s);
+            let filled_w = (total_4s / max_expected) * bar_w;
+            draw_rectangle(bar_x, bar_y + 4.0, bar_w, bar_h, Color::new(0.9, 0.9, 0.9, 1.0));
+            draw_rectangle(bar_x, bar_y + 4.0, filled_w, bar_h, Color::new(0.2, 0.6, 0.2, 1.0));
+            draw_text(&format!("{}", stats.total_fours), bar_x + bar_w + 8.0, bar_y + 14.0, FONT_SIZE / 3.5, BLACK);
+
+            // Draw sparkline
+            let history = &stats.p_move_probs;
+            let spark_x = WINDOW_WIDTH - 260.0;
+            let spark_y = bar_y + 30.0;
+            let spark_w = 200.0;
+            let spark_h = 30.0;
+            draw_rectangle(spark_x, spark_y, spark_w, spark_h, Color::new(0.98, 0.98, 0.98, 1.0));
+            if !history.is_empty() {
+                let len = history.len();
+                for k in 0..len.saturating_sub(1) {
+                    let v1 = history[k];
+                    let v2 = history[k + 1];
+                    let x1 = spark_x + (k as f32 / (len as f32 - 1.0)) * spark_w;
+                    let x2 = spark_x + ((k + 1) as f32 / (len as f32 - 1.0)) * spark_w;
+                    let y1 = spark_y + spark_h - (v1 * spark_h);
+                    let y2 = spark_y + spark_h - (v2 * spark_h);
+                    draw_line(x1, y1, x2, y2, 2.0, Color::new(0.2, 0.4, 0.9, 1.0));
                 }
             }
         }
